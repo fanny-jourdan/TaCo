@@ -1,0 +1,10 @@
+features/
+occupation_pred/
+gender_pred/
+global_importance/
+no_gender/
+plotconceptimportance/
+figures/
+__pycache__/
+concept_removal_draft.py
+.DS_Store
