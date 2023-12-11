@@ -1,6 +1,12 @@
-# Gender_Neutral_Embeddings
+# 🌮 TaCo: Targeted Concept Removal in Ouput Embeddings for NLP via Information Theory and Explainability
 
+This repository contains code for the paper:
 
-Anonymized Github for the EACL review for the paper: *Gender Neutral Embedding, an explainability tool for NLP Fairness*. 
+*TaCo: Targeted Concept Removal in Ouput Embeddings for NLP via Information Theory and Explainability*, Fanny Jourdan, Louis Bethune, Agustin Picard, Laurent Risser & Nicholas Asher. preprint.
 
 The code is implemented and available **for Pytorch**. A notebook is available: [notebook example](./example.ipynb).
+
+
+# Author
+
+Fanny Jourdan - fanny.jourdan@irit.fr, PhD Student, ANITI/IRIT, Paul Sabatier University
