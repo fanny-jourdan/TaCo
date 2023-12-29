@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from transformers import RobertaPreTrainedModel, RobertaModel, AutoTokenizer
-from transformers import DebertaV2PreTrainedModel, DebertaV2Model, DebertaV2Tokenizer
+from transformers import DebertaV2PreTrainedModel, DebertaV2Model, DebertaV2Tokenizer, DebertaV2ForSequenceClassification
 
 class CustomRobertaClassificationHead(nn.Module):
     def __init__(self, config, num_labels):
@@ -124,13 +124,14 @@ class CustomDebertaV2ClassificationHead(nn.Module):
         return x
 
 class CustomDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
+#class CustomDebertaV2ForSequenceClassification(DebertaV2ForSequenceClassification):
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def __init__(self, config, num_labels):
         super().__init__(config)
         self.num_labels = num_labels
         self.config = config
-        
+
         # Transformer part
         self.deberta = DebertaV2Model(config)
         # Custom classification head
@@ -153,18 +154,39 @@ class CustomDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         logits = self.classifier(sequence_output)
         return logits
 
+def adjust_weight_names_DeBERTa(pretrained_state_dict):
+    weight_map = {
+        'pooler.dense.weight': 'classifier.dense.weight',
+        'pooler.dense.bias': 'classifier.dense.bias',
+        'classifier.bias': 'classifier.out_proj.bias',
+        'classifier.weight': 'classifier.out_proj.weight'
+    }
 
-def get_model(model_path, model_type = "roberta", num_labels: int = 28):
-  if model_type == "roberta":
+    adjusted_state_dict = {}
+    for key in pretrained_state_dict:
+        new_key = weight_map.get(key, key)  # Utiliser la nouvelle clé si elle existe dans weight_map
+        adjusted_state_dict[new_key] = pretrained_state_dict[key]
+    
+    return adjusted_state_dict
+
+
+def get_model(model_path, model_type = "RoBERTa", num_labels: int = 28):
+  if model_type == "RoBERTa":
       tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
       model = CustomRobertaForSequenceClassification.from_pretrained(model_path, num_labels, local_files_only=True)
 
-  elif model_type == "deberta":
+  elif model_type == "DeBERTa":
       tokenizer = DebertaV2Tokenizer.from_pretrained("microsoft/deberta-v3-base")
-      model = CustomDebertaV2ForSequenceClassification.from_pretrained(model_path, num_labels, local_files_only=True)
+      # Initialisation du modèle personnalisé
+      pretrained_model = DebertaV2ForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, local_files_only=True)
+      adjusted_state_dict = adjust_weight_names_DeBERTa(pretrained_model.state_dict())
+      
+      model = CustomDebertaV2ForSequenceClassification(pretrained_model.config, num_labels=num_labels)
+      model.load_state_dict(adjusted_state_dict)
+      #model = CustomDebertaV2ForSequenceClassification.from_pretrained(model_path, num_labels, local_files_only=True)
         
   else:
-      return("Error: model_type must be either roberta or deberta.")
+      return("Error: model_type must be either RoBERTa or DeBERTa.")
 
   model.eval()
   #device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
