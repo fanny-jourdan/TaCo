@@ -107,6 +107,8 @@ def load_embeddings(dataframes, baseline, *,
                     model=None,
                     tokenizer=None,
                     regenerate=False,
+                    model_type="RoBERTa",
+                    nbatch=128,
                     device='cuda'):
   """Load the embeddings on the disk.
   
@@ -114,28 +116,30 @@ def load_embeddings(dataframes, baseline, *,
     dataframes: A tuple of dataframes (train, val, test).
     model: A model that has a features attribute (default: None).
     regenerate: If True, regenerate the embeddings (default: False).
+    model_type = Type of model loaded "RoBERTa" or "DeBERTa" (default: "RoBERTa").
     cuda: If True, load embeddings on the GPU (default: True).
+    nbatch: Size of batch for the prediction, int (default: 128).
     baseline: str, 'normal' or 'nogender'.
   """
   if baseline == 'normal':
-        train_features_name = 'features/train_robertaembeddings.pt'  
-        val_features_name = 'features/val_robertaembeddings.pt'  
-        test_features_name = 'features/test_robertaembeddings.pt'
+        train_features_name = f'features/train_{model_type}embeddings.pt'  
+        val_features_name = f'features/val_{model_type}embeddings.pt'  
+        test_features_name = f'features/test_{model_type}embeddings.pt'
   elif baseline == 'nogender':
-        train_features_name = 'features/train_robertaembeddings_negi.pt'  
-        val_features_name = 'features/val_robertaembeddings_negi.pt'  
-        test_features_name = 'features/test_robertaembeddings_negi.pt'
+        train_features_name = f'features/train_{model_type}embeddings_negi.pt'  
+        val_features_name = f'features/val_{model_type}embeddings_negi.pt'  
+        test_features_name = f'features/test_{model_type}embeddings_negi.pt'
   else:
     assert False, "baseline must be 'normal' or 'nogender'"
 
   dt_X_train, dt_X_val, dt_X_test = dataframes
 
   if regenerate:
-    train_features, _ = batch_predict(model.features, tokenizer, dt_X_train, 128, device)
+    train_features, _ = batch_predict(model.features, tokenizer, dt_X_train, nbatch, device)
     torch.save(train_features, train_features_name)
-    val_features, _ = batch_predict(model.features, tokenizer, dt_X_val, 128, device)
+    val_features, _ = batch_predict(model.features, tokenizer, dt_X_val, nbatch, device)
     torch.save(val_features, val_features_name)
-    test_features, _ = batch_predict(model.features, tokenizer, dt_X_test, 128, device)
+    test_features, _ = batch_predict(model.features, tokenizer, dt_X_test, nbatch, device)
     torch.save(test_features, test_features_name)
   else:
     train_features = torch.load(train_features_name, map_location=torch.device(device))

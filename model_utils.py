@@ -189,6 +189,6 @@ def get_model(model_path, model_type = "RoBERTa", num_labels: int = 28):
       return("Error: model_type must be either RoBERTa or DeBERTa.")
 
   model.eval()
-  #device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-  #model.to(device)
+  device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+  model.to(device)
   return model, tokenizer
