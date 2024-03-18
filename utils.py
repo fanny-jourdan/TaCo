@@ -14,13 +14,21 @@ def batcher(elements, batch_size):
     yield batch
 
 
+# def tokenize(tokenizer, samples, device = 'cuda'):
+#   samples = [s for s in samples]
+#   x = tokenizer(samples, padding="max_length",
+#                 max_length = 512, truncation = True,
+#                 return_tensors='pt')
+#   x = x.to(device)
+#   return x
+
 def tokenize(tokenizer, samples, device = 'cuda'):
-  samples = [s for s in samples]
-  x = tokenizer(samples, padding="max_length",
-                max_length = 512, truncation = True,
-                return_tensors='pt')
-  x = x.to(device)
-  return x
+    samples = [s for s in samples]
+    x = tokenizer(samples, padding="max_length",
+                  max_length = 512, truncation = True,
+                  return_tensors='pt')
+    x = {key: val.to(device) for key, val in x.items() if key in ["input_ids", "attention_mask"]}
+    return x
 
 
 def preprocess(tokenizer, samples, device = 'cuda'):
@@ -29,7 +37,7 @@ def preprocess(tokenizer, samples, device = 'cuda'):
   y = torch.Tensor(y.astype(int)).to(device)
   return x, y
 
-
+  
 def batch_predict(model, tokenizer, inputs, batch_size = 64, device = 'cuda'):
   predictions = None
   labels = None
@@ -41,4 +49,3 @@ def batch_predict(model, tokenizer, inputs, batch_size = 64, device = 'cuda'):
       labels = yp if labels is None else torch.cat([labels, yp])
     
     return predictions, labels
-  
