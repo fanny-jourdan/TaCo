@@ -17,6 +17,8 @@ class SparseSVD(Decomposition):
         self.n_components = n_components
 
     def decompose(self, A): 
+        if A.is_cuda:
+            A = A.cpu()
         A = A.numpy() 
         _, p = A.shape
         v0 = np.ones(p)

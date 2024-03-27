@@ -226,10 +226,6 @@ def train_occupations(
         train_kwargs.update(cuda_kwargs)
         val_kwargs.update(cuda_kwargs)
 
-    def to_cuda_tensor(arr):
-      return torch.Tensor(arr).type(torch.FloatTensor).to(device)
-
-    datasets = tuple(map(to_cuda_tensor, datasets))
     features, val_features, test_features = datasets
 
     def to_cuda_tensor(arr):
@@ -298,19 +294,20 @@ def predict_gender_from_occupation(occupation_dataset, genders):
     Output:
     - Prints accuracy of prediction and plots a co-occurrence matrix.
     '''
-  labels, val_labels, _ = occupation_dataset
-  def trainable_labels(tensor):
-      return tensor.long().cpu().numpy()    
-  gender_train, gender_val, gender_test = genders
-  co_occurrence_matrix = np.zeros((28, 2))
-  y_occupations = np.concatenate([trainable_labels(labels), trainable_labels(val_labels)])
-  y_gender = np.concatenate([gender_train.to_numpy(), gender_val.to_numpy()])
-  y_occupations = y_occupations.flatten()
-  y_gender = y_gender.flatten()
-  np.add.at(co_occurrence_matrix, (y_occupations, y_gender), 1)
-  predicted_gender = np.argmax(co_occurrence_matrix, axis=1)
-  total_examples = np.sum(co_occurrence_matrix)
-  correct_predictions = co_occurrence_matrix[np.arange(28), predicted_gender]
-  accuracy = np.sum(correct_predictions) / total_examples
-  print(f"Accuracy: {accuracy*100:.3f}%")
-  plot_co_occurence(co_occurrence_matrix, per_class=True)
+    labels, val_labels, _ = occupation_dataset
+    def trainable_labels(tensor):
+        return tensor.long().cpu().numpy()    
+    
+    gender_train, gender_val, gender_test = genders
+    co_occurrence_matrix = np.zeros((28, 2))
+    y_occupations = np.concatenate([trainable_labels(labels), trainable_labels(val_labels)])
+    y_gender = np.concatenate([gender_train.to_numpy(), gender_val.to_numpy()])
+    y_occupations = y_occupations.flatten()
+    y_gender = y_gender.flatten()
+    np.add.at(co_occurrence_matrix, (y_occupations, y_gender), 1)
+    predicted_gender = np.argmax(co_occurrence_matrix, axis=1)
+    total_examples = np.sum(co_occurrence_matrix)
+    correct_predictions = co_occurrence_matrix[np.arange(28), predicted_gender]
+    accuracy = np.sum(correct_predictions) / total_examples
+    print(f"Accuracy: {accuracy*100:.3f}%")
+    plot_co_occurence(co_occurrence_matrix, per_class=True)
