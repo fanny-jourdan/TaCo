@@ -63,9 +63,14 @@ class TruncatedSVD2(Decomposition):
 
 
 class PCA(Decomposition):
+    def __init__(self, n_components=20):
+        self.n_components = n_components
+        
     def decompose(self, A): 
+        if A.is_cuda:
+            A = A.cpu()
         A = A.numpy()
-        pca = sk.decomposition.PCA()
+        pca = sk.decomposition.PCA(n_components=self.n_components)
         U = pca.fit_transform(A)
         W = pca.components_
         return torch.tensor(U.copy()), torch.tensor(W.copy())
@@ -76,7 +81,9 @@ class ICA(Decomposition):
         self.n_components = n_components
 
     def decompose(self, A): 
-        A = A.numpy() 
+        if A.is_cuda:
+            A = A.cpu()
+        A = A.numpy()
         ica = sk.decomposition.FastICA(n_components=self.n_components, random_state=0)
         U = ica.fit_transform(A)
         W = ica.mixing_
@@ -123,7 +130,7 @@ def decompose_choice(method_name, n_components=None):
     elif method_name=="tSVD2":
         return(TruncatedSVD2(n_components))
     elif method_name=="PCA":
-        return(PCA())
+        return(PCA(n_components))
     elif method_name=="ICA":
         return(ICA(n_components))
     elif method_name=="NMF":

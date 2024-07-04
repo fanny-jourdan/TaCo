@@ -20,6 +20,7 @@ baseline = 'normal'
 #modeltype, nbepochs = 'DistilBERT', 3
 modeltype, nbepochs = 'DeBERTa', 3
 
+nb_reps = 5
 
 datafolder = "/Users/fannyjourdan/Documents/doctorat/jupyterlab_OSIRIM/data"
 if baseline == "normal":
@@ -101,55 +102,56 @@ l_occupation_acc = []
 nb_epochs_training = 100
 
 for nb_cpt_remov in range(1, num_components):
-    W_no_gender, to_keep = crop_concepts(W.numpy(), angle, num_or_threshold=num_components-nb_cpt_remov)
-    train_a_no_gender = build_gender_neutral_features(U_train.numpy(), W_no_gender, to_keep)
-    val_a_no_gender = build_gender_neutral_features(U_val.numpy(), W_no_gender, to_keep)
-    test_a_no_gender = build_gender_neutral_features(U_test.numpy(), W_no_gender, to_keep)
-    train_a_no_gender.shape, val_a_no_gender.shape, test_a_no_gender.shape
+  W_no_gender, to_keep = crop_concepts(W.numpy(), angle, num_or_threshold=num_components-nb_cpt_remov)
+  train_a_no_gender = build_gender_neutral_features(U_train.numpy(), W_no_gender, to_keep)
+  val_a_no_gender = build_gender_neutral_features(U_val.numpy(), W_no_gender, to_keep)
+  test_a_no_gender = build_gender_neutral_features(U_test.numpy(), W_no_gender, to_keep)
+  train_a_no_gender.shape, val_a_no_gender.shape, test_a_no_gender.shape
     
-    real_dataset = train_a_no_gender, val_a_no_gender, test_a_no_gender
+  real_dataset = train_a_no_gender, val_a_no_gender, test_a_no_gender
 
+  save_name = f'no_gender/pred_g_{method_name}{num_components}_cr{nb_cpt_remov}_{modeltype}_b_{baseline}.pt'
+  real_dataset = tuple(map(to_cuda_tensor, real_dataset))
+
+  save_path = f'no_gender/pred_occ_{method_name}{num_components}_cr{nb_cpt_remov}_{modeltype}_b_{baseline}.pt'
+  occupations = train_labels, val_labels, test_labels
+
+  test_a_no_gender = torch.from_numpy(test_a_no_gender).float().to(device)
+
+  gender_acc = []
+  occupation_acc = []
     
+  for rep in range(nb_reps):
     #gender train
-    save_name = f'no_gender/pred_g_{method_name}{num_components}_cr{nb_cpt_remov}_{modeltype}_b_{baseline}.pt'
-    real_dataset = tuple(map(to_cuda_tensor, real_dataset))
     pg_no_gender_model = train_genders(real_dataset, genders,
-                                     batch_size=2048, test_batch_size=8192,
-                                     learning_rate=5e-4, epochs=nb_epochs_training,
-                                     train_on_validation_set=False,
-                                     model_type=mlp_or_lin,
-                                     save_path_and_name=save_name)
+                                       batch_size=2048, test_batch_size=8192,
+                                       learning_rate=5e-4, epochs=nb_epochs_training,
+                                       train_on_validation_set=False,
+                                       model_type=mlp_or_lin,
+                                       save_path_and_name=save_name)
     
-    
-    test_a_no_gender = torch.from_numpy(test_a_no_gender).float().to(device)
     pred_gen = pg_no_gender_model(test_a_no_gender)
-
-    _, predicted_classes = torch.max(pred_gen, 1)
+    predicted_classes = torch.max(pred_gen, 1)
     predicted_classes = predicted_classes.cpu().numpy()
-    l_gender_acc.append(accuracy_score(predicted_classes, gender_test))
-    print("l_gender_acc", l_gender_acc)
     
+    gender_acc.append(accuracy_score(predicted_classes, gender_test))
+       
     #occupation train
-    save_path = f'no_gender/pred_occ_{method_name}{num_components}_cr{nb_cpt_remov}_{modeltype}_b_{baseline}.pt'
-    occupations = train_labels, val_labels, test_labels
-    
     pocc_no_gender_model = train_occupations(real_dataset, occupations,
-                                           batch_size=2048, val_batch_size=8192,
-                                           learning_rate=5e-4, epochs=nb_epochs_training,
-                                           train_on_validation_set=False,
-                                           model_type=mlp_or_lin,
-                                           save_path_and_name=save_path)
-    
-    
+                                            batch_size=2048, val_batch_size=8192,
+                                            learning_rate=5e-4, epochs=nb_epochs_training,
+                                            train_on_validation_set=False,
+                                            model_type=mlp_or_lin,
+                                            save_path_and_name=save_path)
+       
     pred_occ = pocc_no_gender_model(test_a_no_gender)
-    
     _, predicted_classes = torch.max(pred_occ, 1)
     predicted_classes = predicted_classes.cpu().numpy()
-    l_occupation_acc.append(accuracy_score(predicted_classes, test_labels.cpu().numpy()))
-    print("l_occupation_acc", l_occupation_acc)
 
+    occupation_acc.append(accuracy_score(predicted_classes, test_labels.cpu().numpy()))
+
+  l_gender_acc.append(gender_acc)
+  l_occupation_acc.append(occupation_acc)
     
-pickle.dump(l_gender_acc, open(f'figures/list/l_gender_acc_{modeltype}_{method_name}{num_components}_{mlp_or_lin}_baseline_{baseline}.pkl',"wb"))
-pickle.dump(l_occupation_acc, open(f'figures/list/l_occupation_acc_{modeltype}_{method_name}{num_components}_{mlp_or_lin}_baseline_{baseline}.pkl',"wb"))
-
-
+pickle.dump(l_gender_acc, open(f'figures/list/l_gender_acc_{modeltype}_{method_name}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
+pickle.dump(l_occupation_acc, open(f'figures/list/l_occupation_acc_{modeltype}_{method_name}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
