@@ -36,15 +36,11 @@ def load_dataset(datafolder, baseline):
       where dt_X is a dataframe of strings,
       gender_names and occ_names are list of strings
   """  
-  if baseline == 'normal':
-    X = pickle.load(open(f"{datafolder}/X_raw_clean.pkl",'rb'))
-  elif baseline == 'nogender':
-    X = pickle.load(open(f"{datafolder}/X_nogen_complete.pkl",'rb'))
-  else:
-    assert False, "baseline must be 'normal' or 'nogender'"
 
-  gender = pickle.load(open(f"{datafolder}/Gen.pkl",'rb'))
-  labels = pickle.load(open(f"{datafolder}/Titles.pkl",'rb'))
+  X = pickle.load(open(f"{datafolder}/data.pkl",'rb'))
+
+  gender = pickle.load(open(f"{datafolder}/gender.pkl",'rb'))
+  labels = pickle.load(open(f"{datafolder}/labels.pkl",'rb'))
 
   gender_names = get_gender_names()
   occ_names = get_occupation_names()

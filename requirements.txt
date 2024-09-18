@@ -1,0 +1,18 @@
+transformers
+#torch
+#numpy
+#pickle
+tqdm
+scikit-learn
+ipykernel
+fast_ml
+scipy
+
+#only vizualisation part:
+seaborn
+#matplotlib
+umap
+
+#only explanation part:
+nltk
+flair
