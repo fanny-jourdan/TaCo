@@ -7,6 +7,7 @@ scikit-learn
 ipykernel
 fast_ml
 scipy
+pandas
 
 #only vizualisation part:
 seaborn

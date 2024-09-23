@@ -7,4 +7,5 @@ plotconceptimportance/
 figures/
 __pycache__/
 concept_removal_draft.py
+test_methods.ipynb
 .DS_Store

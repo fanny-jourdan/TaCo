@@ -3,9 +3,9 @@ from datasets_tools import load_dataset, create_splits
 from datasets_tools import get_occupation_labels, load_embeddings
 from model_utils import get_model
 from utils import batch_predict
-from decomposition import decompose_choice
-from concept_removal import sobol_importance_from_sample
-from concept_removal import crop_concepts, build_gender_neutral_features
+from TaCo.TaCo.decomposition import decompose_choice
+from TaCo.TaCo.concept_removal import sobol_importance_from_sample
+from TaCo.TaCo.concept_removal import crop_concepts, build_gender_neutral_features
 from train import train_genders, train_occupations
 from train import LogisticMLP
 
