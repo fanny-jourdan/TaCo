@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from datasets_tools import get_occupation_names, get_gender_names
+from tools.datasets_tools import get_occupation_names, get_gender_names
 #from fairnessmetrics import get_named_metrics
 
 

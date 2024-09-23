@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 import tqdm
 import numpy as np
-from TaCo.tools.visualization import plot_co_occurence
+from tools.visualization import plot_co_occurence
 
 
 class LogisticMLP(nn.Module):

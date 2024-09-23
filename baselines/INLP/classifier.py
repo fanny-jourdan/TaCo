@@ -1,5 +1,7 @@
-import numpy as np
+# Please note the code is taken from the following repository: 
+# https://github.com/shauli-ravfogel/nullspace_projection/src/classifier.py
 
+import numpy as np
 
 # an abstract class for linear classifiers
 

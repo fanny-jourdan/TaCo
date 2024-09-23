@@ -4,12 +4,7 @@ import pandas as pd
 import torch
 from fast_ml.model_development import train_valid_test_split
 
-from utils import batch_predict
-
-
-def download_from_drive(file_id, output):
-  import gdown    
-  gdown.download_folder(id=file_id, output=output, quiet=True, use_cookies=True)
+from tools.utils import batch_predict
 
 
 def get_occupation_names():
@@ -24,12 +19,11 @@ def get_gender_names():
   return gender_names
 
 
-def load_dataset(datafolder, baseline):
+def load_dataset(datafolder):
   """Load the dataset.
   
   Args:
     datafolder: path to the folder containing the dataset
-    baseline: 'normal' or 'nogender'
   
   Returns:
     a tuple (dt_X, gender_names, occ_names)
@@ -102,6 +96,7 @@ def get_occupation_labels(dt_X_train, dt_X_val, dt_X_test, device = 'cuda'):
 def load_embeddings(dataframes, baseline, *,
                     model=None,
                     tokenizer=None,
+                    path=None,
                     regenerate=False,
                     model_type="RoBERTa",
                     nbatch=128,
@@ -118,13 +113,13 @@ def load_embeddings(dataframes, baseline, *,
     baseline: str, 'normal' or 'nogender'.
   """
   if baseline == 'normal':
-        train_features_name = f'features/train_{model_type}embeddings.pt'  
-        val_features_name = f'features/val_{model_type}embeddings.pt'  
-        test_features_name = f'features/test_{model_type}embeddings.pt'
+        train_features_name = path + f'features/train_{model_type}embeddings.pt'  
+        val_features_name = path + f'features/val_{model_type}embeddings.pt'  
+        test_features_name = path + f'features/test_{model_type}embeddings.pt'
   elif baseline == 'nogender':
-        train_features_name = f'features/train_{model_type}embeddings_negi.pt'  
-        val_features_name = f'features/val_{model_type}embeddings_negi.pt'  
-        test_features_name = f'features/test_{model_type}embeddings_negi.pt'
+        train_features_name = path + f'features/train_{model_type}embeddings_negi.pt'  
+        val_features_name = path + f'features/val_{model_type}embeddings_negi.pt'  
+        test_features_name = path + f'features/test_{model_type}embeddings_negi.pt'
   else:
     assert False, "baseline must be 'normal' or 'nogender'"
 

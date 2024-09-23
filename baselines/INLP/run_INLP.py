@@ -1,13 +1,16 @@
+# Please note the code is inspire from the following repository: 
+# https://github.com/shauli-ravfogel/nullspace_projection/notebooks/biasbios_bert.ipynb
+
 import torch  
 from tqdm.autonotebook import tqdm
-from TaCo_baseline.tools.datasets_tools import load_dataset, create_splits
-from TaCo_baseline.tools.datasets_tools import get_occupation_labels, load_embeddings
-from TaCo_baseline.tools.model_utils import get_model
+from tools.datasets_tools import load_dataset, create_splits
+from tools.datasets_tools import get_occupation_labels, load_embeddings
+from tools.model_utils import get_model
 
 
-from TaCo_baseline.tools.train import train_genders
-from TaCo_baseline.tools.train import train_occupations
-from TaCo_baseline.tools.train import LogisticMLP
+from tools.train import train_genders
+from tools.train import train_occupations
+from tools.train import LogisticMLP
 import numpy as np
 
 
@@ -18,7 +21,7 @@ import copy
 import time
 
 from sklearn.svm import LinearSVC
-from TaCo_baseline.INLP.debias import get_debiasing_projection
+from baselines.INLP.debias import get_debiasing_projection
 
 from sklearn.metrics import accuracy_score
 

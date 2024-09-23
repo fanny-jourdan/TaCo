@@ -1,8 +1,11 @@
+# Please note the code is taken from the following repository: 
+# https://github.com/shauli-ravfogel/nullspace_projection/src/debias.py
+
 
 from typing import Dict
 import numpy as np
 import scipy
-from INLP.classifier import SKlearnClassifier
+from baselines.INLP.classifier import SKlearnClassifier
 from typing import List
 from tqdm import tqdm
 import random
