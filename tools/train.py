@@ -64,11 +64,13 @@ def train(model, device, train_loader, optimizer, epoch):
         total_correct += correct
         num_examples += len(data)
         acc = total_correct / num_examples * 100
-        msg = f'Train Epoch: {epoch}\tAccuracy: {acc:.3f}%\tLoss: {loss.item():.6f}'
-        pbar.set_description(msg)
+        #msg = f'Train Epoch: {epoch}\tAccuracy: {acc:.3f}%\tLoss: {loss.item():.6f}'
+        #pbar.set_description(msg)
     pbar.close()
 
 
+
+ 
 def evaluate(model, device, test_loader):
     """Evaluate the model on the test set.
 
@@ -169,8 +171,9 @@ def train_genders(
 
     # scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
     for epoch in range(1, epochs + 1):
-        print(f"Epoch {epoch}", flush=True)
-        evaluate(model, device, test_loader)
+        if epoch%10 == 0:
+            print(f"Epoch {epoch}", flush=True)
+            evaluate(model, device, test_loader)
         train(model, device, train_loader, optimizer, epoch)
         # scheduler.step()
     
@@ -270,8 +273,9 @@ def train_occupations(
 
     # scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
     for epoch in range(1, epochs + 1):
-        print(f"Epoch {epoch}")
-        evaluate(model, device, val_loader)
+        if epoch%10 == 0:
+            print(f"Epoch {epoch}")
+            evaluate(model, device, val_loader)
         train(model, device, train_loader, optimizer, epoch)
 
     print("Final evaluation on test set:")

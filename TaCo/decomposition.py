@@ -110,8 +110,8 @@ def decompose_choice(method_name, n_components=None):
     
     Parameters:
     method_name (str): The name of the decomposition method to be used. It should be one of the following strings:
-        - "sSVD": Calls SparseSVD method.
-        - "SVD": Calls SVD method.
+        - "SVD": Calls SparseSVD method.
+        - "SVD2": Calls SVD method.
         - "tSVD1,2": Calls TruncatedSVD1,2 method.
         - "PCA": Calls PCA method.
         - "ICA": Calls ICA method.
@@ -121,9 +121,9 @@ def decompose_choice(method_name, n_components=None):
     Returns:
     The result of the called decomposition method or an error string if the provided method_name does not match any of the available methods.
     """
-    if method_name=="sSVD":
+    if method_name=="SVD":
         return(SparseSVD(n_components))
-    elif method_name=="SVD":
+    elif method_name=="SVD2":
         return(SVD())
     elif method_name=="tSVD1":
         return(TruncatedSVD1(n_components))

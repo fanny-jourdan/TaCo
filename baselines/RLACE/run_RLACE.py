@@ -1,7 +1,3 @@
-# Please note the code is inspired from the following repository: 
-# https://github.com/shauli-ravfogel/nullspace_projection/notebooks/biasbios_bert.ipynb
-
-
 import sys
 sys.path.append('/home/fanny.jourdan/dev/TaCo')
 
@@ -20,7 +16,7 @@ import copy
 import time
 
 from sklearn.svm import LinearSVC
-from baselines.INLP.debias import get_debiasing_projection
+from baselines.RLACE.rlace import solve_adv_game
 
 from sklearn.metrics import accuracy_score
 
@@ -74,51 +70,38 @@ y_test_gender = gender_test.to_numpy()
 y_test = test_labels.cpu().numpy()
 
 
-def get_projection_matrix(num_clfs, X_train, Y_train_gender, X_dev, Y_dev_gender, Y_train_task, Y_dev_task):
-
-    is_autoregressive = True
-    min_acc = 0.
-    n = num_clfs
-    #random_subset = 1.0
-    start = time.time()
-    TYPE= "svm"
-    dim = X_train.shape[1]
-    
-    #x_train_gender = x_train.copy()
-    #x_dev_gender = x_dev.copy()
-        
-    
-    if TYPE == "sgd":
-        gender_clf = SGDClassifier
-        params = {'loss': 'hinge', 'penalty': 'l2', 'fit_intercept': False, 'class_weight': None, 'n_jobs': 32}
-    else:
-        gender_clf = LinearSVC
-        params = {'penalty': 'l2', 'C': 0.01, 'fit_intercept': True, 'class_weight': None, "dual": False}
-        
-    P,rowspace_projections, Ws = get_debiasing_projection(gender_clf, params, n, dim, is_autoregressive, min_acc,
-                                              X_train, Y_train_gender, X_dev, Y_dev_gender,
-                                       Y_train_main=Y_train_task, Y_dev_main=Y_dev_task, by_class = True)
-    print("time: {}".format(time.time() - start))
-    return P,rowspace_projections, Ws
-
-
-
 l_num_clfs = [10,20,50,100,200,300,500]
 l_acc_occ, l_acc_gen = [], []
 
+num_iters = 50000
 
-for num_clfs in l_num_clfs:
+rank=1
+optimizer_class = torch.optim.SGD
+optimizer_params_P = {"lr": 0.003, "weight_decay": 1e-4}
+optimizer_params_predictor = {"lr": 0.003,"weight_decay": 1e-4}
+#epsilon = 0.001 # stop 0.1% from majority acc
+l_epsilon = [0.0001, 0.001, 0.01, 0.1]
+batch_size = 256
+
+
+
+
+for epsilon in l_epsilon:
     idx = np.random.rand(x_train.shape[0]) < 1.
-    P, rowspace_projections, Ws = get_projection_matrix(num_clfs, x_train[idx], y_train_gender[idx], x_dev, y_dev_gender, y_train, y_dev)
+    output = solve_adv_game(x_train, y_train, x_dev, y_dev, rank=rank, device="cuda", out_iters=num_iters,
+                       optimizer_class=optimizer_class, optimizer_params_P =optimizer_params_P,
+                       optimizer_params_predictor=optimizer_params_predictor, epsilon=epsilon,batch_size=batch_size)
+    
 
-    np.save(basesavepath + f"INLP/proj/P_{num_clfs}_{modeltype}.npy", P)
-    np.save(basesavepath + f"INLP/proj/rowspace_projections_{num_clfs}_{modeltype}.npy", rowspace_projections)
-    np.save(basesavepath + f"INLP/proj/Ws_{num_clfs}_{modeltype}.npy", Ws)
 
-    x_train_p, x_dev_p, x_test_p = (P.dot(x_train.T)).T, (P.dot(x_dev.T)).T, (P.dot(x_test.T)).T
+    np.save(basesavepath + f"RLACE/proj/output_{num_iters}_epsilon{epsilon}_{modeltype}.npy", output)
+
+    P = output["P"]
+    x_train_p, x_dev_p, x_test_p = x_train@P, x_dev@P, x_test@P
 
     #nu information for the occupation
-    save_path_occ = basesavepath + f'INLP/no_gender_pred/pred_occ{num_clfs}d_{modeltype}_b_{baseline}.pt'
+    save_path_occ = basesavepath + f'RLACE/no_gender_pred/pred_occ{num_iters}d_epsi{epsilon}_{modeltype}_b_{baseline}.pt'
+
     real_dataset = x_train_p, x_dev_p, x_test_p
     x_test_p_tensor = torch.Tensor(x_test_p).type(torch.FloatTensor).to(device)
 
@@ -138,7 +121,8 @@ for num_clfs in l_num_clfs:
 
     
     #nu information for the gender
-    save_path_gen = basesavepath + f'INLP/no_gender_pred/pred_gender{num_clfs}d_{modeltype}_b_{baseline}.pt'
+    save_path_gen = basesavepath + f'RLACE/no_gender_pred/pred_gender{num_iters}d_epsi{epsilon}_{modeltype}_b_{baseline}.pt'
+
     def to_cuda_tensor(df):
         return torch.Tensor(df).type(torch.FloatTensor)#.to("cuda")
     real_dataset_tens = tuple(map(to_cuda_tensor, real_dataset))
@@ -155,5 +139,5 @@ for num_clfs in l_num_clfs:
     l_acc_gen.append(accuracy_score(predicted_classes, gender_test))
 
 
-l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "l_num_clfs": l_num_clfs}
-np.save(basesavepath + f'INLP/results/results_occ_gen_clfs_{modeltype}_b_{baseline}.npy', l_results)
+l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "epsilon": l_epsilon}
+np.save(basesavepath + f'RLACE/results/results{num_iters}iters_occ_gen_epsilon_{modeltype}_b_{baseline}.npy', l_results)

@@ -8,4 +8,7 @@ figures/
 __pycache__/
 concept_removal_draft.py
 test_methods.ipynb
+
+baselines/INLP/run_INLP.sh
+baselines/INLP/run_INLP.out
 .DS_Store
