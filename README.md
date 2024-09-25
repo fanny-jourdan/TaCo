@@ -30,6 +30,6 @@ At the end, you have the CLS tokens, from which the number of concepts requested
 
 A detailed notebook (step by step) is available: [notebook example](./example.ipynb).
 
-You can found the paper figures on [visualization notebook](./visualization.ipynb).
+You can found the paper figures on [visualization notebook](./visualizations.ipynb).
 
 
