@@ -9,6 +9,16 @@ __pycache__/
 concept_removal_draft.py
 test_methods.ipynb
 
-baselines/INLP/run_INLP.sh
+
 baselines/INLP/run_INLP.out
+baselines/INLP/run_INLP_lin.py
+baselines/INLP/run_INLP_lin.out
+baselines/RLACE/run_RLACE.out
+baselines/RLACE/run_RLACE_lin.out
+baselines/RLACE/run_RLACE_lin.py
+baselines/RLACE/runalp_RLACE.out
+baselines/RLACE/runalp_RLACE.py
+
+TaCo/run_TaCo_lin.out
+TaCo/run_TaCo_lin.py
 .DS_Store

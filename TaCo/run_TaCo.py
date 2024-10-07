@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/home/fanny.jourdan/dev/TaCo')
 import torch  
 from tools.datasets_tools import load_dataset, create_splits, get_occupation_labels, load_embeddings
 from tools.model_utils import get_model

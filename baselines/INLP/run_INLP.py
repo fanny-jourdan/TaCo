@@ -103,11 +103,12 @@ def get_projection_matrix(num_clfs, X_train, Y_train_gender, X_dev, Y_dev_gender
 
 
 
-l_num_clfs = [10,20,50,100,200,300,500]
-l_acc_occ, l_acc_gen = [], []
-
+l_num_clfs = [10,20,50,100,200,300,500,600,700]
+l_acc_occ, l_acc_gen, l_num_clfs_aux = [], [], []
+l_acc_occ_linear, l_acc_gen_linear = [], []
 
 for num_clfs in l_num_clfs:
+    l_num_clfs_aux.append(num_clfs)
     idx = np.random.rand(x_train.shape[0]) < 1.
     P, rowspace_projections, Ws = get_projection_matrix(num_clfs, x_train[idx], y_train_gender[idx], x_dev, y_dev_gender, y_train, y_dev)
 
@@ -116,6 +117,12 @@ for num_clfs in l_num_clfs:
     np.save(basesavepath + f"INLP/proj/Ws_{num_clfs}_{modeltype}.npy", Ws)
 
     x_train_p, x_dev_p, x_test_p = (P.dot(x_train.T)).T, (P.dot(x_dev.T)).T, (P.dot(x_test.T)).T
+
+
+    #linear nu information for the occupation
+    classifier = LogisticRegression(max_iter=1000)
+    classifier.fit(x_train_p, y_train)
+    l_acc_occ_linear.append(classifier.score(x_test_p, y_test))
 
     #nu information for the occupation
     save_path_occ = basesavepath + f'INLP/no_gender_pred/pred_occ{num_clfs}d_{modeltype}_b_{baseline}.pt'
@@ -136,7 +143,11 @@ for num_clfs in l_num_clfs:
     predicted_classes = predicted_classes.cpu().numpy()
     l_acc_occ.append(accuracy_score(predicted_classes, test_labels.cpu().numpy()))
 
-    
+    #linear nu information for the gender
+    classifier_g = LogisticRegression(max_iter=1000)
+    classifier_g.fit(x_train_p, y_train_gender)
+    l_acc_gen_linear.append(classifier_g.score(x_test_p, y_test_gender))
+
     #nu information for the gender
     save_path_gen = basesavepath + f'INLP/no_gender_pred/pred_gender{num_clfs}d_{modeltype}_b_{baseline}.pt'
     def to_cuda_tensor(df):
@@ -154,6 +165,8 @@ for num_clfs in l_num_clfs:
     predicted_classes = predicted_classes.cpu().numpy()
     l_acc_gen.append(accuracy_score(predicted_classes, gender_test))
 
+    l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "l_num_clfs": l_num_clfs_aux,
+                 "l_acc_occ_linear": l_acc_occ_linear, "l_acc_gen_linear": l_acc_gen_linear}
+    np.save(basesavepath + f'INLP/results/results_occ_gen_clfs_{modeltype}_b_{baseline}.npy', l_results)
 
-l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "l_num_clfs": l_num_clfs}
-np.save(basesavepath + f'INLP/results/results_occ_gen_clfs_{modeltype}_b_{baseline}.npy', l_results)
+

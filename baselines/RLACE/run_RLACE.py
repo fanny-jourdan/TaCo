@@ -70,37 +70,47 @@ y_test_gender = gender_test.to_numpy()
 y_test = test_labels.cpu().numpy()
 
 
-l_num_clfs = [10,20,50,100,200,300,500]
-l_acc_occ, l_acc_gen = [], []
+#l_acc_occ, l_acc_gen, l_epsilon_aux = [], [], []
+l_acc_occ, l_acc_gen, l_rank_aux = [], [], []
+
 
 num_iters = 50000
+#num_iters = 5000
 
-rank=1
+
+#rank=1
+l_rank = [1,2,3,4,5,6,7,8,9,10]
 optimizer_class = torch.optim.SGD
 optimizer_params_P = {"lr": 0.003, "weight_decay": 1e-4}
 optimizer_params_predictor = {"lr": 0.003,"weight_decay": 1e-4}
-#epsilon = 0.001 # stop 0.1% from majority acc
-l_epsilon = [0.0001, 0.001, 0.01, 0.1]
-batch_size = 256
+
+epsilon = 0.001 # stop 0.1% from majority acc
+#l_epsilon = [0.0001, 0.001, 0.01, 0.1]
+
+#batch_size = 256
+#batch_size = 1024
+#batch_size = 4096
+batch_size = 8192
 
 
-
-
-for epsilon in l_epsilon:
+#for epsilon in l_epsilon:
+for rank in l_rank:
+    #l_epsilon_aux.append(epsilon)
+    l_rank_aux.append(rank)
     idx = np.random.rand(x_train.shape[0]) < 1.
-    output = solve_adv_game(x_train, y_train, x_dev, y_dev, rank=rank, device="cuda", out_iters=num_iters,
-                       optimizer_class=optimizer_class, optimizer_params_P =optimizer_params_P,
-                       optimizer_params_predictor=optimizer_params_predictor, epsilon=epsilon,batch_size=batch_size)
+    output = solve_adv_game(x_train, y_train_gender, x_dev, y_dev_gender, rank=rank, device="cuda", out_iters=num_iters,
+                       optimizer_class=optimizer_class, optimizer_params_P=optimizer_params_P,
+                       optimizer_params_predictor=optimizer_params_predictor, epsilon=epsilon, batch_size=batch_size)
     
 
 
-    np.save(basesavepath + f"RLACE/proj/output_{num_iters}_epsilon{epsilon}_{modeltype}.npy", output)
+    np.save(basesavepath + f"RLACE/proj/output_{rank}rank_{num_iters}iters_epsilon{epsilon}_{modeltype}.npy", output)
 
     P = output["P"]
     x_train_p, x_dev_p, x_test_p = x_train@P, x_dev@P, x_test@P
 
     #nu information for the occupation
-    save_path_occ = basesavepath + f'RLACE/no_gender_pred/pred_occ{num_iters}d_epsi{epsilon}_{modeltype}_b_{baseline}.pt'
+    save_path_occ = basesavepath + f'RLACE/no_gender_pred/pred_{rank}rank_occ{num_iters}iters_epsi{epsilon}_{modeltype}_b_{baseline}.pt'
 
     real_dataset = x_train_p, x_dev_p, x_test_p
     x_test_p_tensor = torch.Tensor(x_test_p).type(torch.FloatTensor).to(device)
@@ -121,7 +131,7 @@ for epsilon in l_epsilon:
 
     
     #nu information for the gender
-    save_path_gen = basesavepath + f'RLACE/no_gender_pred/pred_gender{num_iters}d_epsi{epsilon}_{modeltype}_b_{baseline}.pt'
+    save_path_gen = basesavepath + f'RLACE/no_gender_pred/pred_{rank}rank_gender{num_iters}iters_epsi{epsilon}_{modeltype}_b_{baseline}.pt'
 
     def to_cuda_tensor(df):
         return torch.Tensor(df).type(torch.FloatTensor)#.to("cuda")
@@ -138,6 +148,12 @@ for epsilon in l_epsilon:
     predicted_classes = predicted_classes.cpu().numpy()
     l_acc_gen.append(accuracy_score(predicted_classes, gender_test))
 
+    #l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "epsilon": l_epsilon_aux}
+    #np.save(basesavepath + f'RLACE/results/results_{rank}rank_{num_iters}iters_occ_gen_epsilon_{modeltype}_b_{baseline}.npy', l_results)
+    l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "rank": l_rank_aux}
+    np.save(basesavepath + f'RLACE/results/results_{num_iters}iters_{epsilon}epsilon_occ_gen_rank_{modeltype}_b_{baseline}.npy', l_results)
 
-l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "epsilon": l_epsilon}
-np.save(basesavepath + f'RLACE/results/results{num_iters}iters_occ_gen_epsilon_{modeltype}_b_{baseline}.npy', l_results)
+
+
+#l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "epsilon": l_epsilon}
+#np.save(basesavepath + f'RLACE/results/results__{rank}rank_{num_iters}iters_occ_gen_epsilon_{modeltype}_b_{baseline}.npy', l_results)

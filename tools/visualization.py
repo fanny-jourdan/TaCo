@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from tools.datasets_tools import get_occupation_names, get_gender_names
-#from fairnessmetrics import get_named_metrics
+from matplotlib.lines import Line2D
+import seaborn as sns
+import pandas as pd
 
+from tools.datasets_tools import get_occupation_names, get_gender_names
 
 def plot_co_occurence(co_occurrence_matrix, per_class=True):
   # Set up the figure and axes
@@ -65,7 +67,6 @@ def plot_co_importance(global_importance_occ, global_importance_gender):
 
 
 def plot_reconstruction_error(rel_errors_all_masks):
-  import seaborn as sns
   sns.histplot(np.random.choice(rel_errors_all_masks, size=10_000), stat='probability')
   plt.xlabel('Relative error')
   plt.ylabel('Probability')
@@ -73,3 +74,229 @@ def plot_reconstruction_error(rel_errors_all_masks):
 
 
 
+def prepare_data_drop(methods_data, baseline1_data, drop_metric='Gender'):
+    """
+    Prepare a DataFrame containing data for plotting accuracy vs. accuracy drop.
+    """
+    data_list = []
+
+    if drop_metric == 'Gender':
+        baseline_accuracy = baseline1_data['Gender Accuracy']
+        drop_label = 'Gender Accuracy Drop'
+        other_label = 'Occupation Accuracy'
+    elif drop_metric == 'Occupation':
+        baseline_accuracy = baseline1_data['Occupation Accuracy']
+        drop_label = 'Occupation Accuracy Drop'
+        other_label = 'Gender Accuracy'
+    else:
+        raise ValueError("drop_metric must be either 'Gender' or 'Occupation'")
+
+    for method, accuracies in methods_data.items():
+        occ_accuracy = accuracies['Occupation Accuracy']
+        gender_accuracy = accuracies['Gender Accuracy']
+
+        if drop_metric == 'Gender':
+            accuracy_drop = [(baseline_accuracy - acc) / baseline_accuracy for acc in gender_accuracy]
+            other_accuracy = occ_accuracy
+        else:  # drop_metric == 'Occupation'
+            accuracy_drop = [(baseline_accuracy - acc) / baseline_accuracy for acc in occ_accuracy]
+            other_accuracy = gender_accuracy
+
+        for drop, other_acc in zip(accuracy_drop, other_accuracy):
+            data_list.append({
+                'Method': method,
+                drop_label: drop,
+                other_label: other_acc
+            })
+
+    df = pd.DataFrame(data_list)
+    return df
+
+
+
+def plot_accuracy_vs_accuracy_drop(
+    x_col,
+    y_col,
+    df,
+    additional_points=None,
+    method_colors=None,
+    method_markers=None,
+    legend=False,
+    xlim=None,
+    ylim=None,
+    min_drop_line=None,
+    min_drop_label=None):
+    """
+    Generalized function to plot accuracy vs accuracy drop.
+
+    Parameters:
+    - x_col: Column name for the x-axis.
+    - y_col: Column name for the y-axis.
+    - df: DataFrame containing the data to plot.
+    - additional_points: List of dicts with 'Method', x_col, and y_col.
+    - method_colors: Dict mapping method names to colors.
+    - method_markers: Dict mapping method names to marker styles.
+    - legend: Bool indicating whether to display legend.
+    - xlim: Tuple specifying x-axis limits (min, max).
+    - ylim: Tuple specifying y-axis limits (min, max).
+    - min_drop_line: Float value for the vertical line position (if applicable).
+    - min_drop_label: Label for the vertical line (if applicable).
+    """
+    plt.figure(figsize=(12, 8), dpi=300)
+
+    # Plot data for each method
+    for method in df['Method'].unique():
+        method_df = df[df['Method'] == method]
+        label_method = method if legend else None
+        marker_style = method_markers.get(method, 'o') if method_markers else 'o'
+
+        # Line plot
+        sns.lineplot(
+            data=method_df,
+            x=x_col,
+            y=y_col,
+            color=method_colors.get(method, 'black'),
+            markersize=10,
+            label=label_method,
+            legend=False
+        )
+
+        # Scatter plot
+        if marker_style is not None:
+            sns.scatterplot(
+                data=method_df,
+                x=x_col,
+                y=y_col,
+                color=method_colors.get(method, 'black'),
+                s=100,
+                marker=marker_style,
+                label=None,
+                legend=False
+            )
+
+    # Plot additional points
+    if additional_points:
+        for point in additional_points:
+            method = point['Method']
+            x = point[x_col]
+            y = point[y_col]
+            marker_style = method_markers.get(method, 'o') if method_markers else 'o'
+            label_method = method if legend else None
+
+            plt.scatter(
+                [x],
+                [y],
+                s=220,
+                marker=marker_style,
+                color=method_colors.get(method, 'black'),
+                label=label_method
+            )
+
+    # Add vertical line at min_drop_line if provided
+    if min_drop_line is not None and (xlim is None or (xlim[0] <= min_drop_line <= xlim[1])):
+        plt.axvline(
+            x=min_drop_line,
+            ymin=0,
+            ymax=1,
+            color=method_colors.get('Min Line', 'green'),
+            linestyle='--',
+            linewidth=4.0,
+            label=min_drop_label if legend else None
+        )
+
+    # Set axis labels
+    plt.xlabel(x_col)
+    plt.ylabel(y_col)
+
+    # Set axis limits if provided
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+
+    # Add legend
+    if legend:
+        plt.legend(title='Method', loc='best')
+
+    plt.show()
+
+
+def prepare_accuracy_data(concept_removed, methods_data, baseline2_data, min_gender):
+    """
+    Prepare a DataFrame containing all necessary data for the accuracy plots.
+
+    methods_data: dict of method names to dicts with 'Occupation Accuracy' and 'Gender Accuracy' lists.
+    baseline2_data: dict with 'Occupation Accuracy' and 'Gender Accuracy' single values.
+    min_gender: float, value of min_gender.
+    """
+    data_list = []
+    num_points = len(concept_removed)
+
+    for method, accuracies in methods_data.items():
+        occ_accuracy = accuracies['Occupation Accuracy']
+        gender_accuracy = accuracies['Gender Accuracy']
+        for n, acc in zip(concept_removed, occ_accuracy):
+            data_list.append({'Method': method, 'Number of concepts removed': n, 'Accuracy': acc, 'Metric': 'Occupation'})
+        for n, acc in zip(concept_removed, gender_accuracy):
+            data_list.append({'Method': method, 'Number of concepts removed': n, 'Accuracy': acc, 'Metric': 'Gender'})
+
+    # Baseline 2 data
+    occ_accuracy_baseline2 = [baseline2_data['Occupation Accuracy']] * num_points
+    gender_accuracy_baseline2 = [baseline2_data['Gender Accuracy']] * num_points
+    method = 'Baseline 2'
+    for n, acc in zip(concept_removed, occ_accuracy_baseline2):
+        data_list.append({'Method': method, 'Number of concepts removed': n, 'Accuracy': acc, 'Metric': 'Occupation'})
+    for n, acc in zip(concept_removed, gender_accuracy_baseline2):
+        data_list.append({'Method': method, 'Number of concepts removed': n, 'Accuracy': acc, 'Metric': 'Gender'})
+
+    # Min Gender line for Gender Metric
+    for n in concept_removed:
+        data_list.append({'Method': 'Min Gender', 'Number of concepts removed': n, 'Accuracy': min_gender, 'Metric': 'Gender'})
+
+    df = pd.DataFrame(data_list)
+    return df
+
+
+
+def plot_accuracy(df, method_colors, concept_removed, legend=False):
+    """
+    Plot the Occupation and Gender accuracies.
+    """
+    # Create the palette for seaborn
+    palette = {method: color for method, color in method_colors.items() if method in df['Method'].unique()}
+
+    # Plotting
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
+
+    # Top plot for Occupation
+    sns.lineplot(data=df[df['Metric'] == 'Occupation'], x="Number of concepts removed", y="Accuracy", hue="Method",
+                 palette=palette, ax=ax1, linewidth=2.5)
+
+    # Bottom plot for Gender
+    sns.lineplot(data=df[df['Metric'] == 'Gender'], x="Number of concepts removed", y="Accuracy", hue="Method",
+                 palette=palette, ax=ax2, linewidth=2.5)
+
+    # Adjust legend
+    if legend:
+        handles = [Line2D([], [], color=color, label=method) for method, color in method_colors.items()]
+        fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=1, frameon=True)
+
+    # Remove individual legends
+    ax1.get_legend().remove()
+    ax2.get_legend().remove()
+
+    # Add labels
+    ax1.set_ylabel('Occupation Accuracy')
+    ax2.set_ylabel('Gender Accuracy')
+    ax2.set_xlabel('Number of concepts removed')
+
+    # Set x-axis limits and ticks
+    ax1.set_xlim(min(concept_removed), max(concept_removed))
+    ax2.set_xlim(min(concept_removed), max(concept_removed))
+    ax2.set_xticks(concept_removed)
+    ax1.set_xticks(concept_removed)
+
+    # Adjust layout
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+    plt.show()
