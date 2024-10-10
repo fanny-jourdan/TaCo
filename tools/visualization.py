@@ -124,6 +124,8 @@ def plot_accuracy_vs_accuracy_drop(
     legend=False,
     xlim=None,
     ylim=None,
+    log_scale_x=False,
+    title=None,
     min_drop_line=None,
     min_drop_label=None):
     """
@@ -139,26 +141,38 @@ def plot_accuracy_vs_accuracy_drop(
     - legend: Bool indicating whether to display legend.
     - xlim: Tuple specifying x-axis limits (min, max).
     - ylim: Tuple specifying y-axis limits (min, max).
-    - min_drop_line: Float value for the vertical line position (if applicable).
+    - log_scale_x: Bool indicating whether to use a logarithmic scale for the x-axis.
+    - title: Title for the plot (if applicable).
+    - min_drop_line: Tuple (value, axis) to specify the line position and orientation ('x' for vertical, 'y' for horizontal).
     - min_drop_label: Label for the vertical line (if applicable).
     """
-    plt.figure(figsize=(12, 8), dpi=300)
+    plt.figure(figsize=(12, 8), dpi=600)
 
     # Plot data for each method
     for method in df['Method'].unique():
         method_df = df[df['Method'] == method]
         label_method = method if legend else None
         marker_style = method_markers.get(method, 'o') if method_markers else 'o'
+        linestyle = '-' #if 'TaCo' not in method else '-'
+
+        if method == 'TaCo PCA':
+            zorder = 4  
+        elif 'TaCo' in method:
+            zorder = 3  
+        else:
+            zorder = 2
 
         # Line plot
-        sns.lineplot(
+        sns.lineplot(linewidth=2.5,
             data=method_df,
             x=x_col,
             y=y_col,
             color=method_colors.get(method, 'black'),
-            markersize=10,
+            linestyle=linestyle,
+            markersize=20,
             label=label_method,
-            legend=False
+            legend=False,
+            zorder=zorder
         )
 
         # Scatter plot
@@ -171,7 +185,8 @@ def plot_accuracy_vs_accuracy_drop(
                 s=100,
                 marker=marker_style,
                 label=None,
-                legend=False
+                legend=False,
+                zorder=zorder
             )
 
     # Plot additional points
@@ -189,24 +204,39 @@ def plot_accuracy_vs_accuracy_drop(
                 s=220,
                 marker=marker_style,
                 color=method_colors.get(method, 'black'),
-                label=label_method
+                label=label_method,
+                zorder=3
             )
 
     # Add vertical line at min_drop_line if provided
-    if min_drop_line is not None and (xlim is None or (xlim[0] <= min_drop_line <= xlim[1])):
-        plt.axvline(
-            x=min_drop_line,
-            ymin=0,
-            ymax=1,
-            color=method_colors.get('Min Line', 'green'),
-            linestyle='--',
-            linewidth=4.0,
-            label=min_drop_label if legend else None
-        )
+    if min_drop_line is not None:
+        line_value, axis = min_drop_line
+        if axis == 'x' and (xlim is None or (xlim[0] <= line_value <= xlim[1])):
+            plt.axvline(
+                x=line_value,
+                ymin=0,
+                ymax=1,
+                color=method_colors.get('Min Line', 'green'),
+                linestyle='--',
+                linewidth=2,
+                label=min_drop_label if legend else None,
+                zorder=1
+            )
+        elif axis == 'y' and (ylim is None or (ylim[0] <= line_value <= ylim[1])):
+            plt.axhline(
+                y=line_value,
+                xmin=0,
+                xmax=1,
+                color=method_colors.get('Min Line', 'green'),
+                linestyle='--',
+                linewidth=2,
+                label=min_drop_label if legend else None,
+                zorder=1
+            )
 
     # Set axis labels
-    plt.xlabel(x_col)
-    plt.ylabel(y_col)
+    plt.xlabel(x_col, fontsize=15)
+    plt.ylabel(y_col, fontsize=15)
 
     # Set axis limits if provided
     if xlim is not None:
@@ -214,9 +244,19 @@ def plot_accuracy_vs_accuracy_drop(
     if ylim is not None:
         plt.ylim(ylim)
 
+    # Set x-axis to logarithmic scale if specified
+    if log_scale_x:
+        plt.xscale('log')
+
+    # Set title if provided
+    if title:
+        plt.title(title, fontsize=18)
+
     # Add legend
     if legend:
-        plt.legend(title='Method', loc='best')
+        plt.legend(title='Methods', loc='best', fontsize=15)
+
+    plt.tick_params(axis='both', which='major', labelsize=15)
 
     plt.show()
 

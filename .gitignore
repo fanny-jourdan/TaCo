@@ -11,14 +11,29 @@ test_methods.ipynb
 
 
 baselines/INLP/run_INLP.out
-baselines/INLP/run_INLP_lin.py
-baselines/INLP/run_INLP_lin.out
 baselines/RLACE/run_RLACE.out
-baselines/RLACE/run_RLACE_lin.out
-baselines/RLACE/run_RLACE_lin.py
 baselines/RLACE/runalp_RLACE.out
 baselines/RLACE/runalp_RLACE.py
 
+
 TaCo/run_TaCo_lin.out
 TaCo/run_TaCo_lin.py
+TaCo/run_TaCo_lin2.out
+TaCo/run_TaCo_lin2.py
+TaCo/run_TaCo_lin3.out
+TaCo/run_TaCo_lin3.py
+baselines/RLACE/run_RLACE2.out
+baselines/RLACE/run_RLACE2.py
+baselines/INLP/run_INLP2.py
+baselines/INLP/run_INLP2.out
+baselines/LEACE/run_LEACE.out
+baselines/LEACE/run_LEACE2.py
+baselines/LEACE/run_LEACE2.out
+
+run_load_embeddings.py
+run_load_embeddings.out
+run_T5.py
+run_T5.out
+
+
 .DS_Store

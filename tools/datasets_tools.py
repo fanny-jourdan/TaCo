@@ -93,6 +93,25 @@ def get_occupation_labels(dt_X_train, dt_X_val, dt_X_test, device = 'cuda'):
   return labels, val_labels, test_labels
 
 
+def load_in_chunks(file_name, device, chunk_size=1000):
+    # CPU
+    tensor = torch.load(file_name, map_location=torch.device("cpu"))
+
+    # chunks for loading on GPU
+    num_chunks = (tensor.shape[0] + chunk_size - 1) // chunk_size
+    tensor_cuda = []
+    
+    for i in range(num_chunks):
+        start_idx = i * chunk_size
+        end_idx = min((i + 1) * chunk_size, tensor.shape[0])
+        chunk = tensor[start_idx:end_idx].to(device)
+        tensor_cuda.append(chunk)
+
+    # Concatenate chunks
+    tensor_cuda = torch.cat(tensor_cuda, dim=0)
+    return tensor_cuda
+
+
 def load_embeddings(dataframes, baseline, *,
                     model=None,
                     tokenizer=None,
@@ -133,9 +152,9 @@ def load_embeddings(dataframes, baseline, *,
     test_features, _ = batch_predict(model.features, tokenizer, dt_X_test, nbatch, device)
     torch.save(test_features, test_features_name)
   else:
-    train_features = torch.load(train_features_name, map_location=torch.device(device))
-    val_features = torch.load(val_features_name, map_location=torch.device(device))
-    test_features = torch.load(test_features_name, map_location=torch.device(device))
+    train_features = load_in_chunks(train_features_name, device)
+    val_features = load_in_chunks(val_features_name, device)
+    test_features = load_in_chunks(test_features_name, device)
 
   train_val_test_features = train_features, val_features, test_features
   train_val_test_labels = get_occupation_labels(dt_X_train, dt_X_val, dt_X_test, device)

@@ -27,8 +27,8 @@ from sklearn.metrics import accuracy_score
 baseline = 'normal' 
 
 #modeltype, nb_epochs = 'RoBERTa', 10
-#modeltype, nb_epochs = 'DeBERTa', 3
-modeltype, nb_epochs = 'DistilBERT', 3
+modeltype, nb_epochs = 'DeBERTa', 3
+#modeltype, nb_epochs = 'DistilBERT', 3
 
 basesavepath = "/data/fanny.jourdan/TaCo_baseline/"
 
@@ -103,7 +103,9 @@ def get_projection_matrix(num_clfs, X_train, Y_train_gender, X_dev, Y_dev_gender
 
 
 
-l_num_clfs = [10,20,50,100,200,300,500,600,700]
+l_num_clfs = [200,300,400,500,550,600,650,700,750]
+
+nb_reps = 5 
 l_acc_occ, l_acc_gen, l_num_clfs_aux = [], [], []
 l_acc_occ_linear, l_acc_gen_linear = [], []
 
@@ -116,57 +118,63 @@ for num_clfs in l_num_clfs:
     np.save(basesavepath + f"INLP/proj/rowspace_projections_{num_clfs}_{modeltype}.npy", rowspace_projections)
     np.save(basesavepath + f"INLP/proj/Ws_{num_clfs}_{modeltype}.npy", Ws)
 
+    #P = np.load(basesavepath + f"INLP/proj/P_{num_clfs}_{modeltype}.npy", allow_pickle=True)
+
     x_train_p, x_dev_p, x_test_p = (P.dot(x_train.T)).T, (P.dot(x_dev.T)).T, (P.dot(x_test.T)).T
 
-
-    #linear nu information for the occupation
-    classifier = LogisticRegression(max_iter=1000)
-    classifier.fit(x_train_p, y_train)
-    l_acc_occ_linear.append(classifier.score(x_test_p, y_test))
-
-    #nu information for the occupation
-    save_path_occ = basesavepath + f'INLP/no_gender_pred/pred_occ{num_clfs}d_{modeltype}_b_{baseline}.pt'
     real_dataset = x_train_p, x_dev_p, x_test_p
     x_test_p_tensor = torch.Tensor(x_test_p).type(torch.FloatTensor).to(device)
 
+    def to_cuda_tensor(df):
+            return torch.Tensor(df).type(torch.FloatTensor)#.to("cuda")
+    real_dataset_tens = tuple(map(to_cuda_tensor, real_dataset))
+
     occupations = train_labels, val_labels, test_labels
-    pocc_no_gender_model = train_occupations(real_dataset, occupations,
-                                            batch_size=2048, val_batch_size=8192,
-                                            learning_rate=5e-4, epochs=100,
-                                            train_on_validation_set=False,
-                                            model_type='mlp',
-                                            save_path_and_name=save_path_occ)
+
+    acc_occ, acc_gen, acc_occ_linear, acc_gen_linear = [], [], [], []
+
+    for rep in range(nb_reps):
+        #linear nu information for the occupation
+        classifier = LogisticRegression(max_iter=1000)
+        classifier.fit(x_train_p, y_train)
+        acc_occ_linear.append(classifier.score(x_test_p, y_test))
+
+        #nu information for the occupation
+        pocc_no_occ_model = train_occupations(real_dataset, occupations,
+                                                batch_size=2048, val_batch_size=8192,
+                                                learning_rate=5e-4, epochs=100,
+                                                train_on_validation_set=False,
+                                                model_type='mlp')
     
 
-    pred_occ = pocc_no_gender_model(x_test_p_tensor)
-    _, predicted_classes = torch.max(pred_occ, 1)
-    predicted_classes = predicted_classes.cpu().numpy()
-    l_acc_occ.append(accuracy_score(predicted_classes, test_labels.cpu().numpy()))
+        pred_occ = pocc_no_occ_model(x_test_p_tensor)
+        _, predicted_classes = torch.max(pred_occ, 1)
+        predicted_classes = predicted_classes.cpu().numpy()
+        acc_occ.append(accuracy_score(predicted_classes, test_labels.cpu().numpy()))
 
-    #linear nu information for the gender
-    classifier_g = LogisticRegression(max_iter=1000)
-    classifier_g.fit(x_train_p, y_train_gender)
-    l_acc_gen_linear.append(classifier_g.score(x_test_p, y_test_gender))
+        #linear nu information for the gender
+        classifier_g = LogisticRegression(max_iter=1000)
+        classifier_g.fit(x_train_p, y_train_gender)
+        acc_gen_linear.append(classifier_g.score(x_test_p, y_test_gender))
 
-    #nu information for the gender
-    save_path_gen = basesavepath + f'INLP/no_gender_pred/pred_gender{num_clfs}d_{modeltype}_b_{baseline}.pt'
-    def to_cuda_tensor(df):
-        return torch.Tensor(df).type(torch.FloatTensor)#.to("cuda")
-    real_dataset_tens = tuple(map(to_cuda_tensor, real_dataset))
-    pg_no_gender_model = train_genders(real_dataset_tens, genders,
-                                        batch_size=2048, test_batch_size=8192,
-                                        learning_rate=5e-4, epochs=100,
-                                        train_on_validation_set=True,
-                                        model_type='mlp',
-                                        save_path_and_name=save_path_gen)
+        #nu information for the gender
+        pg_no_gender_model = train_genders(real_dataset_tens, genders,
+                                            batch_size=2048, test_batch_size=8192,
+                                            learning_rate=5e-4, epochs=100,
+                                            train_on_validation_set=True,
+                                            model_type='mlp')
 
-    pred_gen = pg_no_gender_model(x_test_p_tensor)
-    _, predicted_classes = torch.max(pred_gen, 1)
-    predicted_classes = predicted_classes.cpu().numpy()
-    l_acc_gen.append(accuracy_score(predicted_classes, gender_test))
+        pred_gen = pg_no_gender_model(x_test_p_tensor)
+        _, predicted_classes = torch.max(pred_gen, 1)
+        predicted_classes = predicted_classes.cpu().numpy()
+        acc_gen.append(accuracy_score(predicted_classes, gender_test))
 
+    l_acc_occ_linear.append(acc_occ_linear)    
+    l_acc_gen_linear.append(acc_gen_linear)
+    l_acc_occ.append(acc_occ)   
+    l_acc_gen.append(acc_gen)
     l_results = {"l_acc_occ": l_acc_occ, "l_acc_gen": l_acc_gen, "l_num_clfs": l_num_clfs_aux,
                  "l_acc_occ_linear": l_acc_occ_linear, "l_acc_gen_linear": l_acc_gen_linear}
-    np.save(basesavepath + f'INLP/results/results_occ_gen_clfs_{modeltype}_b_{baseline}.npy', l_results)
+    np.save(basesavepath + f'INLP/results/results_occ_gen_clfs_{modeltype}_b_{baseline}_{nb_reps}reps.npy', l_results)
 
 

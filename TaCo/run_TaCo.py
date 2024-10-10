@@ -1,23 +1,22 @@
 import sys
 sys.path.append('/home/fanny.jourdan/dev/TaCo')
 import torch  
-from tools.datasets_tools import load_dataset, create_splits, get_occupation_labels, load_embeddings
+from tools.datasets_tools import load_dataset, create_splits, load_embeddings
 from tools.model_utils import get_model
-from tools.utils import batch_predict
-from tools.train import train_genders, train_occupations, LogisticMLP
+from tools.train import train_genders, train_occupations
 
 from TaCo.TaCo import found_concepts, remove_concept_on_clstoken
 
 import pickle
 from sklearn.metrics import accuracy_score
-import numpy as np
+from sklearn.linear_model import LogisticRegression
 
 baseline = 'normal' 
 #baseline = 'nogender'
 
-#modeltype, nbepochs = 'RoBERTa', 10
+modeltype, nbepochs = 'RoBERTa', 10
 #modeltype, nbepochs = 'DistilBERT', 3
-modeltype, nbepochs = 'DeBERTa', 3
+#modeltype, nbepochs = 'DeBERTa', 3
 
 basesavepath = "/data/fanny.jourdan/TaCo_baseline/"
 
@@ -50,8 +49,6 @@ dt_X_train, dt_X_val, dt_X_test = splits
 gender_train, gender_val, gender_test = genders
 datasets = dt_X_train, dt_X_val, dt_X_test
 
-train_labels, val_labels, test_labels = get_occupation_labels(dt_X_train, dt_X_val, dt_X_test, device)
-
 
 # Load model
 model, tokenizer = get_model(model_path, model_type = modeltype)
@@ -61,6 +58,7 @@ model, tokenizer = get_model(model_path, model_type = modeltype)
 train_val_test_clstoken, train_val_test_labels = load_embeddings(datasets,
                                                                  model=model,
                                                                  tokenizer=tokenizer,
+                                                                 path=basesavepath,
                                                                  baseline=baseline,
                                                                  regenerate=False,
                                                                  model_type=modeltype,
@@ -80,8 +78,8 @@ pg_model = train_genders(real_dataset, genders,
                          batch_size=2048, test_batch_size=8192,
                         learning_rate=1e-3, epochs=0,
                         train_on_validation_set=True,
-                        model_type=mlp_or_lin,
-                        state_dict=state_dict)
+                        model_type=mlp_or_lin)
+                        #state_dict=state_dict)
 
 ##########################################DECOMPOSITION##########################################
 
@@ -96,8 +94,8 @@ def to_cuda_tensor(arr):
     return torch.Tensor(arr).type(torch.FloatTensor).to(device)
     
 
-l_gender_acc = []
-l_occupation_acc = []
+l_gender_acc, l_occupation_acc = [], []
+l_gender_acc_lin, l_occupation_acc_lin = [], []
 
 
 for nb_cpt_remov in range(1, num_components):
@@ -115,11 +113,11 @@ for nb_cpt_remov in range(1, num_components):
 
   test_clstoken_no_gender = torch.from_numpy(test_clstoken_no_gender).float().to(device)
 
-  gender_acc = []
-  occupation_acc = []
+  gender_acc, occupation_acc = [], []
+  gender_acc_lin, occupation_acc_lin = [], []
     
   for rep in range(nb_reps):
-    #gender train
+    #nu information for the gender
     pg_no_gender_model = train_genders(real_dataset, genders,
                                        batch_size=2048, test_batch_size=8192,
                                        learning_rate=5e-4, epochs=nb_epochs_training,
@@ -132,8 +130,13 @@ for nb_cpt_remov in range(1, num_components):
     predicted_classes = predicted_classes.cpu().numpy()
     
     gender_acc.append(accuracy_score(predicted_classes, gender_test))
-       
-    #occupation train
+
+    #linear nu information for the gender
+    classifier_g = LogisticRegression(max_iter=1000)
+    classifier_g.fit(train_clstoken_no_gender, gender_train)
+    gender_acc_lin.append(classifier_g.score(test_clstoken_no_gender, gender_test))
+                        
+    #nu information for the occupation
     pocc_no_gender_model = train_occupations(real_dataset, occupations,
                                             batch_size=2048, val_batch_size=8192,
                                             learning_rate=5e-4, epochs=nb_epochs_training,
@@ -147,8 +150,17 @@ for nb_cpt_remov in range(1, num_components):
 
     occupation_acc.append(accuracy_score(predicted_classes, test_labels.cpu().numpy()))
 
+    #linear nu information for the occupation
+    classifier = LogisticRegression(max_iter=1000)
+    classifier.fit(train_clstoken_no_gender, train_labels.cpu())
+    occupation_acc_lin.append(classifier.score(test_clstoken_no_gender, test_labels.cpu())) 
+
   l_gender_acc.append(gender_acc)
   l_occupation_acc.append(occupation_acc)
+  l_gender_acc_lin.append(gender_acc_lin)
+  l_occupation_acc_lin.append(occupation_acc_lin) 
     
-pickle.dump(l_gender_acc, open(f'figures/list/l_gender_acc_{modeltype}_{method_decompose}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
-pickle.dump(l_occupation_acc, open(f'figures/list/l_occupation_acc_{modeltype}_{method_decompose}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
+pickle.dump(l_gender_acc, open(basesavepath + f'TaCo/list_results/l_gender_acc_{modeltype}_{method_decompose}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
+pickle.dump(l_occupation_acc, open(basesavepath + f'TaCo/list_results/l_occupation_acc_{modeltype}_{method_decompose}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
+pickle.dump(l_gender_acc_lin, open(basesavepath + f'TaCo/list_results/l_LIN_gender_acc_{modeltype}_{method_decompose}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
+pickle.dump(l_occupation_acc_lin, open(basesavepath + f'TaCo/list_results/l_LIN_occupation_acc_{modeltype}_{method_decompose}{num_components}_{mlp_or_lin}_baseline_{baseline}_{nb_reps}reps.pkl',"wb"))
