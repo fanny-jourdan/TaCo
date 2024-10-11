@@ -1,14 +1,17 @@
 __pycache__/
-test_methods.ipynb
 logs/
+test_methods.ipynb
+example.ipynb
 
+
+#TaCo/concept_removal2.py
 
 baselines/INLP/run_INLP.out
 baselines/RLACE/run_RLACE.out
 baselines/RLACE/runalp_RLACE.out
 baselines/RLACE/runalp_RLACE.py
 
-TaCo_run_TaCo.out
+#TaCo_run_TaCo.out
 TaCo/run_TaCo2.out
 TaCo/run_TaCo2.py
 TaCo/run_TaCo3.out
