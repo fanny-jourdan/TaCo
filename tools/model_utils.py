@@ -6,6 +6,8 @@ from transformers import RobertaForSequenceClassification
 from transformers import DistilBertForSequenceClassification
 from transformers import DebertaV2ForSequenceClassification
 from transformers import T5ForSequenceClassification
+from transformers import LlamaForSequenceClassification
+
 
 from typing import Optional, List, Tuple, Dict
 
@@ -65,46 +67,104 @@ class DebertaWrapper(DebertaV2ForSequenceClassification):
     
 
 
+
 class T5Wrapper(T5ForSequenceClassification):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
-    def forward(self, input_ids, attention_mask=None, labels=None):
+    def forward(self, input_ids=None, attention_mask=None, labels=None, **kwargs):
         outputs = super().forward(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=labels
+            input_ids=input_ids, 
+            attention_mask=attention_mask, 
+            labels=labels, 
+            **kwargs
         )
         return outputs.logits
-    
-    def features(self, input_ids, attention_mask=None):
-        # Generates decoder_input_ids by default
-        decoder_input_ids = torch.ones_like(input_ids[:, :1]) * self.config.decoder_start_token_id
-        
-        # Encodes inputs
-        encoder_outputs = self.encoder(
+
+    def features(self, input_ids=None, attention_mask=None, **kwargs):
+        # Vérifier si input_ids est fourni
+        if input_ids is None:
+            raise ValueError("Input_ids must be provided.")
+
+        # Gérer decoder_input_ids
+        decoder_input_ids = kwargs.get('decoder_input_ids', None)
+        decoder_inputs_embeds = kwargs.get('decoder_inputs_embeds', None)
+        if decoder_input_ids is None and decoder_inputs_embeds is None:
+            decoder_input_ids = self._shift_right(input_ids)
+
+        # Obtenir les sorties de l'encodeur
+        outputs = self.transformer(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            return_dict=True
+            decoder_input_ids=decoder_input_ids,
+            decoder_attention_mask=kwargs.get('decoder_attention_mask', None),
+            head_mask=kwargs.get('head_mask', None),
+            decoder_head_mask=kwargs.get('decoder_head_mask', None),
+            cross_attn_head_mask=kwargs.get('cross_attn_head_mask', None),
+            encoder_outputs=kwargs.get('encoder_outputs', None),
+            inputs_embeds=kwargs.get('inputs_embeds', None),
+            decoder_inputs_embeds=decoder_inputs_embeds,
+            use_cache=kwargs.get('use_cache', False),
+            output_attentions=kwargs.get('output_attentions', None),
+            output_hidden_states=kwargs.get('output_hidden_states', None),
+            return_dict=True,
         )
-        hidden_states = encoder_outputs.last_hidden_state
-        
-        # Decodes
-        decoder_outputs = self.decoder(
-            input_ids=decoder_input_ids,
-            encoder_hidden_states=hidden_states,
-            encoder_attention_mask=attention_mask,
-            return_dict=True
-        )
-        # Recovers the hidden state of the last decoder token
-        sequence_output = decoder_outputs.last_hidden_state
-        features = sequence_output[:, -1, :]
-        return features
+        sequence_output = outputs[0]  # (batch_size, seq_len, hidden_size)
+
+        # Créer le masque EOS
+        eos_mask = input_ids.eq(self.config.eos_token_id).to(sequence_output.device)
+
+        if len(torch.unique_consecutive(eos_mask.sum(1))) > 1:
+            raise ValueError("All examples must have the same number of <eos> tokens.")
+
+        # Extraire la représentation de la phrase
+        batch_size, _, hidden_size = sequence_output.shape
+        sentence_representation = sequence_output[eos_mask, :].view(batch_size, -1, hidden_size)[:, -1, :]
+
+        return sentence_representation
 
     def end_model(self, x):
-        x = self.classifier(x)
-        return x
+        logits = self.classification_head(x)
+        return logits
 
+
+
+
+class LlamaWrapper(LlamaForSequenceClassification):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def forward(self, input_ids, attention_mask=None):
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+        )
+        hidden_states = outputs[0]  # last_hidden_state de taille (batch_size, seq_length, hidden_size)
+
+        # Pooling : sélection du premier token (par convention pour la classification)
+        pooled_output = hidden_states[:, 0, :]
+
+        # Application de la couche de classification
+        logits = self.score(pooled_output)
+        return logits
+
+    def features(self, input_ids, attention_mask=None):
+        # Reproduire exactement les mêmes étapes que dans forward jusqu'à pooled_output
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+        )
+        hidden_states = outputs[0]
+
+        # Même pooling que dans forward
+        pooled_output = hidden_states[:, 0, :]
+
+        return pooled_output
+
+    def end_model(self, x):
+        # Application de la même couche de classification que dans forward
+        logits = self.score(x)
+        return logits
 
 
 def get_model(model_path, model_type = "RoBERTa"):
@@ -122,11 +182,16 @@ def get_model(model_path, model_type = "RoBERTa"):
       tokenizer = DebertaV2Tokenizer.from_pretrained("microsoft/deberta-v3-base")
       model = DebertaWrapper.from_pretrained(model_path)
 
-  elif model_type == "T5":
+  elif model_type == "t5":
       tokenizer = AutoTokenizer.from_pretrained("t5-small")
       model = T5Wrapper.from_pretrained(model_path)
+      
+  elif model_type == "Llama3":
+      tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B")
+      model = LlamaWrapper.from_pretrained(model_path)
+      
   else:
-      return("Error: model_type must be either RoBERTa, DistilBERT, DeBERTa or T5.")
+      return("Error: model_type must be either RoBERTa, DistilBERT, DeBERTa, T5 or Llama3.")
 
   model.eval()
   model.to(device)

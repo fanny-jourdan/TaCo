@@ -1,11 +1,13 @@
 import sys
 sys.path.append('/home/fanny.jourdan/dev/TaCo')
+
+
 import torch  
 from tools.datasets_tools import load_dataset, create_splits, load_embeddings
 from tools.model_utils import get_model
 from tools.train import train_genders, train_occupations
 
-from TaCo.TaCo import found_concepts, remove_concept_on_clstoken
+from TaCo import found_concepts, remove_concept_on_clstoken
 
 import pickle
 from sklearn.metrics import accuracy_score
@@ -14,9 +16,11 @@ from sklearn.linear_model import LogisticRegression
 baseline = 'normal' 
 #baseline = 'nogender'
 
-modeltype, nbepochs = 'RoBERTa', 10
+#modeltype, nbepochs = 'RoBERTa', 10
 #modeltype, nbepochs = 'DistilBERT', 3
 #modeltype, nbepochs = 'DeBERTa', 3
+modeltype, nbepochs = 't5', 2
+
 
 basesavepath = "/data/fanny.jourdan/TaCo_baseline/"
 
@@ -32,7 +36,7 @@ else:
 
 nb_reps = 5
 num_components = 20
-method_decompose = "SVD"
+method_decompose = "PCA"
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 mlp_or_lin = "mlp"
@@ -43,7 +47,7 @@ nb_epochs_training = 100
 ##########################################IMPORT MODEL/DATA##########################################
 
 # Load data
-dt_X, gender_names, occ_names = load_dataset(datafolder, baseline=baseline)
+dt_X, gender_names, occ_names = load_dataset(datafolder)
 splits, genders = create_splits(dt_X)
 dt_X_train, dt_X_val, dt_X_test = splits
 gender_train, gender_val, gender_test = genders
@@ -53,16 +57,18 @@ datasets = dt_X_train, dt_X_val, dt_X_test
 # Load model
 model, tokenizer = get_model(model_path, model_type = modeltype)
 
-
+  
 # Load CLS token embeddings
 train_val_test_clstoken, train_val_test_labels = load_embeddings(datasets,
+                                                                 baseline = baseline,
                                                                  model=model,
                                                                  tokenizer=tokenizer,
                                                                  path=basesavepath,
-                                                                 baseline=baseline,
-                                                                 regenerate=False,
+                                                                 regenerate=True,
                                                                  model_type=modeltype,
+                                                                 nbatch=64,
                                                                  device=device)
+
 
 
 train_clstoken, val_clstoken, test_clstoken = train_val_test_clstoken
@@ -73,13 +79,16 @@ real_dataset = (train_clstoken, val_clstoken, test_clstoken)
 save_name = basesavepath + f'gender_pred/{modeltype}_{mlp_or_lin}_baseline_{baseline}.pt'
 
 in_features = train_clstoken.shape[1]
-state_dict = torch.load(save_name, map_location=torch.device(device))
+#state_dict = torch.load(save_name, map_location=torch.device(device))
+
 pg_model = train_genders(real_dataset, genders,
-                         batch_size=2048, test_batch_size=8192,
-                        learning_rate=1e-3, epochs=0,
-                        train_on_validation_set=True,
-                        model_type=mlp_or_lin)
-                        #state_dict=state_dict)
+                          batch_size=2048, test_batch_size=8192,
+                          learning_rate=1e-3, epochs=100,
+                          train_on_validation_set=True,
+                          model_type=mlp_or_lin,
+                          save_path_and_name=save_name)
+                          #state_dict=state_dict)
+
 
 ##########################################DECOMPOSITION##########################################
 
@@ -88,6 +97,8 @@ U_train, U_val, U_test, W, angle = found_concepts(train_clstoken, val_clstoken, 
                                                   method_decompose = method_decompose, num_components = num_components, 
                                                   sobol_nb_design = 50, sobol_sampled = 10_000)
 
+
+print("found concepts done")
 
 
 def to_cuda_tensor(arr):

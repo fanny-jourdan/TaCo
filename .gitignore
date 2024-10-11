@@ -1,13 +1,6 @@
-features/
-occupation_pred/
-gender_pred/
-global_importance/
-no_gender/
-plotconceptimportance/
-figures/
 __pycache__/
-concept_removal_draft.py
 test_methods.ipynb
+logs/
 
 
 baselines/INLP/run_INLP.out
@@ -15,13 +8,11 @@ baselines/RLACE/run_RLACE.out
 baselines/RLACE/runalp_RLACE.out
 baselines/RLACE/runalp_RLACE.py
 
-
-TaCo/run_TaCo_lin.out
-TaCo/run_TaCo_lin.py
-TaCo/run_TaCo_lin2.out
-TaCo/run_TaCo_lin2.py
-TaCo/run_TaCo_lin3.out
-TaCo/run_TaCo_lin3.py
+TaCo_run_TaCo.out
+TaCo/run_TaCo2.out
+TaCo/run_TaCo2.py
+TaCo/run_TaCo3.out
+TaCo/run_TaCo3.py
 baselines/RLACE/run_RLACE2.out
 baselines/RLACE/run_RLACE2.py
 baselines/INLP/run_INLP2.py
@@ -34,6 +25,10 @@ run_load_embeddings.py
 run_load_embeddings.out
 run_T5.py
 run_T5.out
+run_llama3.py    
+run_llama3.out
+
+
 
 
 .DS_Store
