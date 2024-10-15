@@ -64,7 +64,7 @@ train_val_test_clstoken, train_val_test_labels = load_embeddings(datasets,
                                                                  model=model,
                                                                  tokenizer=tokenizer,
                                                                  path=basesavepath,
-                                                                 regenerate=True,
+                                                                 regenerate=False,
                                                                  model_type=modeltype,
                                                                  nbatch=64,
                                                                  device=device)
@@ -78,16 +78,15 @@ train_labels, val_labels, test_labels = train_val_test_labels
 real_dataset = (train_clstoken, val_clstoken, test_clstoken)
 save_name = basesavepath + f'gender_pred/{modeltype}_{mlp_or_lin}_baseline_{baseline}.pt'
 
-in_features = train_clstoken.shape[1]
-#state_dict = torch.load(save_name, map_location=torch.device(device))
+state_dict = torch.load(save_name, map_location=torch.device(device))
 
 pg_model = train_genders(real_dataset, genders,
                           batch_size=2048, test_batch_size=8192,
-                          learning_rate=1e-3, epochs=100,
+                          learning_rate=1e-3, epochs=0,
                           train_on_validation_set=True,
                           model_type=mlp_or_lin,
-                          save_path_and_name=save_name)
-                          #state_dict=state_dict)
+                          save_path_and_name=save_name,
+                          state_dict=state_dict)
 
 
 ##########################################DECOMPOSITION##########################################
@@ -116,10 +115,7 @@ for nb_cpt_remov in range(1, num_components):
 
   real_dataset = train_clstoken_no_gender, val_clstoken_no_gender, test_clstoken_no_gender
 
-  save_name = f'no_gender/pred_g_{method_decompose}{num_components}_cr{nb_cpt_remov}_{modeltype}_b_{baseline}.pt'
   real_dataset = tuple(map(to_cuda_tensor, real_dataset))
-
-  save_path = f'no_gender/pred_occ_{method_decompose}{num_components}_cr{nb_cpt_remov}_{modeltype}_b_{baseline}.pt'
   occupations = train_labels, val_labels, test_labels
 
   test_clstoken_no_gender = torch.from_numpy(test_clstoken_no_gender).float().to(device)
@@ -133,11 +129,10 @@ for nb_cpt_remov in range(1, num_components):
                                        batch_size=2048, test_batch_size=8192,
                                        learning_rate=5e-4, epochs=nb_epochs_training,
                                        train_on_validation_set=False,
-                                       model_type=mlp_or_lin,
-                                       save_path_and_name=save_name)
+                                       model_type=mlp_or_lin)
     
     pred_gen = pg_no_gender_model(test_clstoken_no_gender)
-    predicted_classes = torch.max(pred_gen, 1)
+    _, predicted_classes = torch.max(pred_gen, 1)
     predicted_classes = predicted_classes.cpu().numpy()
     
     gender_acc.append(accuracy_score(predicted_classes, gender_test))
@@ -145,15 +140,14 @@ for nb_cpt_remov in range(1, num_components):
     #linear nu information for the gender
     classifier_g = LogisticRegression(max_iter=1000)
     classifier_g.fit(train_clstoken_no_gender, gender_train)
-    gender_acc_lin.append(classifier_g.score(test_clstoken_no_gender, gender_test))
+    gender_acc_lin.append(classifier_g.score(test_clstoken_no_gender.cpu(), gender_test))
                         
     #nu information for the occupation
     pocc_no_gender_model = train_occupations(real_dataset, occupations,
                                             batch_size=2048, val_batch_size=8192,
                                             learning_rate=5e-4, epochs=nb_epochs_training,
                                             train_on_validation_set=False,
-                                            model_type=mlp_or_lin,
-                                            save_path_and_name=save_path)
+                                            model_type=mlp_or_lin)
        
     pred_occ = pocc_no_gender_model(test_clstoken_no_gender)
     _, predicted_classes = torch.max(pred_occ, 1)
@@ -164,7 +158,7 @@ for nb_cpt_remov in range(1, num_components):
     #linear nu information for the occupation
     classifier = LogisticRegression(max_iter=1000)
     classifier.fit(train_clstoken_no_gender, train_labels.cpu())
-    occupation_acc_lin.append(classifier.score(test_clstoken_no_gender, test_labels.cpu())) 
+    occupation_acc_lin.append(classifier.score(test_clstoken_no_gender.cpu(), test_labels.cpu())) 
 
   l_gender_acc.append(gender_acc)
   l_occupation_acc.append(occupation_acc)

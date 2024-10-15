@@ -18,8 +18,10 @@ from sklearn.metrics import accuracy_score
 baseline = 'normal' 
 
 #modeltype, nb_epochs = 'RoBERTa', 10
-modeltype, nb_epochs = 'DeBERTa', 3
+#modeltype, nb_epochs = 'DeBERTa', 3
 #modeltype, nb_epochs = 'DistilBERT', 3
+modeltype, nb_epochs = 't5', 2
+
 
 basesavepath = "/data/fanny.jourdan/TaCo_baseline/"
 

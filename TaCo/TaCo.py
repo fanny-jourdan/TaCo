@@ -3,8 +3,7 @@ import torch
 import numpy as np
 
 from decomposition import decompose_choice
-from concept_removal import sobol_importance_from_sample
-from concept_removal import crop_concepts, build_gender_neutral_features
+from concept_removal import sobol_importance_from_sample, crop_concepts, build_gender_neutral_features
 
 
 def found_concepts(train_clstoken, val_clstoken, test_clstoken,

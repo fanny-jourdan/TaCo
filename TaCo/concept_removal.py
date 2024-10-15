@@ -2,7 +2,7 @@
 import torch
 import numpy as np
 
-from sobol import ScipySobolSequence, JansenEstimator
+from TaCo.sobol import ScipySobolSequence, JansenEstimator
 from math import ceil
 import tqdm as tqdm
 from sklearn.decomposition import NMF

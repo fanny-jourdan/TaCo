@@ -105,8 +105,7 @@ def get_projection_matrix(num_clfs, X_train, Y_train_gender, X_dev, Y_dev_gender
 
 
 #l_num_clfs = [200,300,400,500,550,600,650,700,750]
-l_num_clfs = [200,300,350,400,450,500]
-
+l_num_clfs = [100, 200,300,350,400,450,500]
 
 nb_reps = 5 
 l_acc_occ, l_acc_gen, l_num_clfs_aux = [], [], []

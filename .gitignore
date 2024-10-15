@@ -4,34 +4,15 @@ test_methods.ipynb
 example.ipynb
 
 
-TaCo/concept_removal2.py
-
 baselines/INLP/run_INLP.out
 baselines/RLACE/run_RLACE.out
 baselines/RLACE/runalp_RLACE.out
 baselines/RLACE/runalp_RLACE.py
 
-#TaCo_run_TaCo.out
-TaCo/run_TaCo2.out
-TaCo/run_TaCo2.py
-TaCo/run_TaCo3.out
-TaCo/run_TaCo3.py
-baselines/RLACE/run_RLACE2.out
-baselines/RLACE/run_RLACE2.py
-baselines/INLP/run_INLP2.py
-baselines/INLP/run_INLP2.out
-baselines/LEACE/run_LEACE.out
-baselines/LEACE/run_LEACE2.py
-baselines/LEACE/run_LEACE2.out
+#TaCo/run_TaCo.out
 
 run_load_embeddings.py
 run_load_embeddings.out
-run_T5.py
-run_T5.out
-run_llama3.py    
-run_llama3.out
-
-
 
 
 .DS_Store

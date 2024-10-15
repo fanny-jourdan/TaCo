@@ -5,9 +5,8 @@ We have modified several parts to adapt the explanation for decomposition method
 """
 import torch
 import numpy as np
-import nltk
 import sklearn.decomposition
-from nltk.tokenize import word_tokenize
+#from nltk.tokenize import word_tokenize
 from scipy.optimize import minimize
 
 from flair.models import SequenceTagger
@@ -19,8 +18,13 @@ import matplotlib.pyplot as plt
 from IPython.core.display import display, HTML
 import colorsys
 
-nltk.download('punkt')
-plt.style.use('seaborn')
+
+def simple_tokenize(text: str) -> list:
+    import re
+    # Use regex to split on whitespace and common punctuation marks
+    return re.findall(r"\w+|[.,!?;]", text)
+
+#plt.style.use('seaborn') 'ggplot'
 
 
 tagger = SequenceTagger.load("flair/chunk-english")
@@ -186,7 +190,7 @@ def occlusion_concepts(
         separate = " "
 
     else:
-        words = word_tokenize(sentence)
+        words = simple_tokenize(sentence)
         if extract_fct == "sentence":
             separate = ". "
         elif extract_fct == "word":
@@ -235,7 +239,7 @@ def viz_concepts(
     if extract_fct == "clause":
         words = extract_clauses(text, clause_type=None)
     else:
-        words = word_tokenize(text)
+        words = simple_tokenize(text)
 
     l_phi = np.array(explanation)
 
