@@ -8,8 +8,8 @@ baselines/INLP/run_INLP.out
 baselines/RLACE/run_RLACE.out
 baselines/RLACE/runalp_RLACE.out
 baselines/RLACE/runalp_RLACE.py
-
-#TaCo/run_TaCo.out
+baselines/LEACE/run_LEACE.out
+TaCo/run_TaCo.out
 
 run_load_embeddings.py
 run_load_embeddings.out
